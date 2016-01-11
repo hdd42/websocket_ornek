@@ -26,8 +26,8 @@
         <tr ng-repeat="urun in urunler track by $index">
             <td width="1%">{{$index+1}}</td>
             <td>{{urun.isim}}</td>
-            <td>{{urun.fiyat|currency}}</td>
-            <td>{{urun.stok}}</td>
+            <td  ng-class="{'bg-info':urun.animate}" >{{urun.fiyat|currency}}</td>
+            <td ng-class="{'bg-info':urun.animate}">{{urun.stok}}</td>
             <td width="5%">
                 <button ng-click="sil(urun)" class="btn btn-danger">Sil</button>
             </td>
@@ -112,6 +112,26 @@
 
             }, 0)
         });
+        socket.on('urunGuncellendi', function (data) {
+
+           var urun = data;
+            console.log("Urun Id => ", urun.id)
+            angular.forEach($scope.urunler, function (value, key) {
+                if(urun.isim == value.isim){
+                   $timeout(function () {
+
+                       $scope.urunler[key] = data
+                       $scope.urunler[key].animate =true
+                       $timeout(function () {
+                           $scope.urunler[key].animate =false
+                       },1000)
+                   })
+
+                }
+
+            });
+
+        });
 
         socket.on('sil', function (data) {
 
@@ -120,6 +140,7 @@
             $timeout(function () {
                 if (Urun.istemci != istemci) {
                     angular.forEach($scope.urunler, function (value, key) {
+                        console.log("mact");
                         if (Urun.data == value.isim) {
                             $scope.urunler.splice(key, 1);
                         }
