@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>WebSocket Ornek</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="http://bit.ly/cdn-bootstrap-css">
+    <link rel="stylesheet" href="http://bit.ly/cdn-bootstrap-theme">
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>
+</head>
+<body lang="en" ng-app="ornekUygulama" ng-controller="ctrl">
+<div class="col-md-6">
+    <h2>Urunler</h2>
+    <table class="table table-bordered">
+        <thead>
+        <tr>
+            <th>#</th>
+            <th>Urun</th>
+            <th>Fiyat</th>
+            <th>Stok</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody id="tBody">
+        <tr ng-repeat="urun in urunler track by $index">
+            <td width="1%">{{$index+1}}</td>
+            <td>{{urun.isim}}</td>
+            <td>{{urun.fiyat|currency}}</td>
+            <td>{{urun.stok}}</td>
+            <td width="5%">
+                <button ng-click="sil(urun)" class="btn btn-danger">Sil</button>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="col-md-6">
+    <h2>Urun ekle</h2>
+
+    <form role="form" id="chat_form">
+        <div class="form-group">
+            <input class="form-control" type="text" name="message" ng-model="urun.isim"
+                   placeholder="Urun " value="" autofocus/>
+        </div>
+        <div class="form-group">
+            <input class="form-control" type="text" name="message" ng-model="urun.fiyat"
+                   placeholder="Fiyat" value="" autofocus/>
+        </div>
+        <div class="form-group">
+            <input class="form-control" type="text" name="message" ng-model="urun.stok"
+                   placeholder="Stok" value="" autofocus/>
+        </div>
+        <button type="button" id="send" class="btn btn-primary"
+                ng-click="Ekle();">Ekle!
+        </button>
+    </form>
+
+</div>
+
+
+<script type="text/javascript">
+    var app = angular.module('ornekUygulama', [])
+    var istemci = Math.random().toString(36).slice(2)
+    console.log("Istemci => ", istemci)
+    app.controller('ctrl', function ($scope, $http, $timeout) {
+        var socket = io('http://localhost:3000');
+        // var socket = new WebSocket('ws://localhost:3001')
+        socket.on('connect', function (data) {
+            console.log("Soket baglantisi kuruldu ");
+        })
+        socket.on('close', function () {
+            console.log("Soket Baglantisi kesildi");
+        })
+
+        $scope.urunler = [];
+        $http.get('/urunler')
+                .success(function (urunler) {
+                    $scope.urunler = urunler
+                    $scope.urunler = urunler
+                });
+
+        $scope.Ekle = function () {
+            $http.post('/urunler', {urun: $scope.urun, istemci: istemci})
+                    .success(function (sonuc) {
+                        console.log()
+                        $scope.urunler.push($scope.urun)
+                        console.log($scope.urunler)
+                        $scope.urun = {}
+                    });
+        }
+        $scope.sil = function (urun) {
+            console.log("Urun to del => ", urun)
+            $http.post('/urunSil/', {urun: urun.isim, istemci: istemci})
+                    .success(function (sonuc) {
+                        angular.forEach($scope.urunler, function (value, key) {
+                            if (urun.isim == value.isim) {
+                                $scope.urunler.splice(key, 1);
+                            }
+                        });
+                    });
+        }
+        socket.on('yeniUrun', function (data) {
+
+            var Urun = JSON.parse(data)
+            console.log("Urun.data =", Urun)
+            $timeout(function () {
+                if (Urun.istemci != istemci) {
+                    $scope.urunler.push(Urun.data)
+                }
+
+            }, 0)
+        });
+
+        socket.on('sil', function (data) {
+
+            var Urun = JSON.parse(data)
+            console.log(data);
+            $timeout(function () {
+                if (Urun.istemci != istemci) {
+                    angular.forEach($scope.urunler, function (value, key) {
+                        if (Urun.data == value.isim) {
+                            $scope.urunler.splice(key, 1);
+                        }
+                    })
+                }
+
+            }, 0)
+        });
+    });
+
+
+</script>
+</body>
+</html>
